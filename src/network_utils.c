@@ -13,12 +13,6 @@ bool is_ipv4(const char *address) {
     return inet_pton(AF_INET, address, &(sa.sin_addr)) == 1;   
 }
 
-// Check for IPv6
-bool is_ipv6(const char *address) {
-    struct sockaddr_in6 sa6;
-    return inet_pton(AF_INET6, address, &(sa6.sin6_addr)) == 1;   
-}
-
 // Check for FQDN 
 bool is_fqdn(const char *hostname) {
     regex_t regex;
@@ -36,7 +30,6 @@ bool is_fqdn(const char *hostname) {
 
 char* check_type(const char *input) {
     if (is_ipv4(input)) return "IPv4";
-    if (is_ipv6(input)) return "IPv6";
     if (is_fqdn(input)) return "FQDN";
     return "None";
 }
@@ -46,7 +39,7 @@ char* check_type(const char *input) {
 char* get_ip_from_fqdn(const char *fqdn) {
     struct addrinfo hints, *res;
     int status;
-    static char ip[INET6_ADDRSTRLEN];
+    static char ip[INET_ADDRSTRLEN];
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -58,14 +51,8 @@ char* get_ip_from_fqdn(const char *fqdn) {
         return NULL;
     }
 
-    if (res->ai_family == AF_INET) {  // IPv4
-        struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
-        inet_ntop(AF_INET, &ipv4->sin_addr, ip,  INET_ADDRSTRLEN);
-    }
-    else if (res->ai_family = AF_INET6) { // IPv6
-        struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)res->ai_addr;
-        inet_ntop(AF_INET6, &ipv6->sin6_addr, ip, INET6_ADDRSTRLEN);
-    }
+    struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
+    inet_ntop(AF_INET, &ipv4->sin_addr, ip,  INET_ADDRSTRLEN);
 
     freeaddrinfo(res);
     

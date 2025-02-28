@@ -8,7 +8,6 @@ extern "C" {
 #include <stdbool.h>
 
 bool is_ipv4(const char *address);
-bool is_ipv6(const char *address);
 bool is_fqdn(const char *hostname);
 char* check_type(const char *input);
 char* get_ip_from_fqdn(const char *fqdn);

@@ -18,7 +18,6 @@ class Config {
     string protocol = "icmp";
     string dst;
     string type_addr;
-    int family;
     int port = 0;
     int max_hops = 64;
     
@@ -48,10 +47,6 @@ class Config {
         this->type_addr = type_addr;
     }
 
-    void set_family(int family) {
-        this->family = family;
-    }
-
     void set_port(int port) {
         this->port = port;
     }
@@ -74,10 +69,6 @@ class Config {
         return type_addr;
     }
 
-    int get_family() {
-        return family;
-    }
-
     int get_port() {
         return port;
     }
@@ -96,9 +87,9 @@ void print_manual() {
     cout << "\n";
     cout << "Options:\n";
     cout << "   -t <protocol>       Which protocol will be used: ICMP, UDP, TCP or all [default: ICMP]\n";
-    cout << "   -d <destination>    Target IP/FQDN. It can be IPv4, IPv6 or FQDN [necessary]\n";
+    cout << "   -d <destination>    Target IP/FQDN. It can be IPv4 or FQDN [necessary]\n";
     cout << "   -p <port>           Target port for using TCP, UDP, all mode [unnecessary for default mode]\n";
-    cout << "   -m <max_hops>       Maximum number of jumps (TTL) [default: 64]\n";
+    cout << "   -m <max_hops>       Maximum number of jumps (TTL) [default: 64]\n\n";
     
 }
 
@@ -133,19 +124,6 @@ Config parse_args(int argc, char* argv[]) {
                 }
                 config.set_type_addr(type_addr);
                 config.set_dst(dst);
-                // AF_INET = 2; AF_INET6 = 10
-                if (type_addr == "FQDN") {
-                    if(check_type(get_ip_from_fqdn(dst.c_str())) == "IPv4") {
-                        config.set_family(2);
-                    }
-                    else {
-                        config.set_family(10);
-                    }
-                }
-                else if (type_addr == "IPv4") 
-                    config.set_family(2);
-                else if (type_addr == "IPv6")
-                    config.set_family(10);
                 break;
             }
 
@@ -182,10 +160,20 @@ Config parse_args(int argc, char* argv[]) {
                 break;
             }
 
+            default: {
+                print_manual();
+                exit(EXIT_FAILURE);
+            }
+
         }
 
 
     }   
+
+    if (optind < argc) {
+        print_manual();
+        exit(EXIT_FAILURE);
+    }
 
     return config;    
 
@@ -197,10 +185,9 @@ int main(int argc, char *argv[]) {
     config.print_data();
     char *dst_ip = strdup(config.get_dst().c_str());
     char *type_addr = strdup(config.get_type_addr().c_str());
-    int family = config.get_family();
     int max_hops = config.get_max_hops();
 
-    icmp_trace(dst_ip, family, type_addr, max_hops);
+    icmp_trace(dst_ip, type_addr, max_hops);
 
     free(dst_ip);
     free(type_addr);
