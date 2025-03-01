@@ -63,14 +63,14 @@ int send_icmp_request(int sockfd, char *dst_ip, int ttl) {
     }
 
 
-    return 0;
+    return sent_bytes;
     
    
 }
 
 // Receiving ICMP echo reply or ICMP time exceeded
-int receive_icmp_reply(int sockfd, char *dst_ip, int ttl, double *rtt) {
-    socklen_t addr_len;
+int receive_icmp_reply(int sockfd, char *dst_ip, int sent_packet_size, int ttl, double *rtt, bool bandwidth) {
+    socklen_t addr_len = sizeof(struct sockaddr_in);
     struct timespec start_time, end_time;
     struct sockaddr_in recv_addr_ipv4;
     char buffer[PACKET_SIZE];
@@ -98,11 +98,37 @@ int receive_icmp_reply(int sockfd, char *dst_ip, int ttl, double *rtt) {
     icmp_header = (struct icmphdr *)(buffer + sizeof(struct ip));
 
     if (icmp_header->type == ICMP_ECHOREPLY) {
-        printf("Received ICMP Echo Reply from %s, hop %d, RTT = %.3f ms\n", dst_ip, ttl, *rtt);
+        // Intermediate host's IP
+        char *itr_ip = inet_ntoa(((struct sockaddr_in *)&recv_addr_ipv4)->sin_addr);
+        // Intermediate host's FQDN
+        char *itr_fqdn = get_fqdn_from_ip(itr_ip);
+
+        if (bandwidth) {
+            // Calculating estimated bandwidth
+            double bandwidth = sent_packet_size / (*rtt / 1000.0); // bytes per second
+
+            printf("%-8d %-15.3f %-20.3f %s (%s) \n", ttl, *rtt, bandwidth, itr_fqdn, itr_ip);
+        }
+        else {
+            printf("%-8d %-15.3f %s (%s) \n", ttl, *rtt, itr_fqdn, itr_ip);
+        }
+        
         return 1;
     }
     else if (icmp_header->type == ICMP_TIME_EXCEEDED) {
-        printf("Intermediate host %s, hop %d, RTT = %.3f ms \n", inet_ntoa(((struct sockaddr_in *)&recv_addr_ipv4)->sin_addr), ttl, *rtt);
+        // Intermediate host's IP
+        char *itr_ip = inet_ntoa(((struct sockaddr_in *)&recv_addr_ipv4)->sin_addr);
+        // Intermediate host's FQDN
+        char *itr_fqdn = get_fqdn_from_ip(itr_ip);
+        if (bandwidth) {
+            // Calculating estimated bandwidth
+            double bandwidth = sent_packet_size / (*rtt / 1000.0); // bytes per second
+
+            printf("%-8d %-15.3f %-20.3f %s (%s) \n", ttl, *rtt, bandwidth, itr_fqdn, itr_ip);
+        }
+        else {
+            printf("%-8d %-15.3f %s (%s) \n", ttl, *rtt, itr_fqdn, itr_ip);
+        }
         return 0;  // Intermediate host, keep increasing TTL
     } 
     else {
@@ -114,7 +140,7 @@ int receive_icmp_reply(int sockfd, char *dst_ip, int ttl, double *rtt) {
 
 
 // Main function
-int icmp_trace(char *dst_ip, char *type_addr, int max_hops) {
+int icmp_trace(char *dst_ip, bool is_fqdn, int max_hops, bool bandwidth) {
     double rtt;
     // Creating raw-socket (raw socket require sudo)
     int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -123,27 +149,26 @@ int icmp_trace(char *dst_ip, char *type_addr, int max_hops) {
         perror("Failure: troubles with creating socket");
         return -1;
     }
-
-    // Convert FQDN to IPv4 or IPv6 if it is necessary
-    if (strcmp(type_addr, "FQDN") != 0) {
+    // Convert FQDN to IPv4 if it is necessary
+    if (is_fqdn) {
         char *fqdn = dst_ip;
         dst_ip = get_ip_from_fqdn(dst_ip);
-        printf("Starting traceroute to %s (%s)\n", fqdn, dst_ip);
     }
-    else {
-        printf("Starting traceroute to %s\n", dst_ip);
-    }
-
+    if (bandwidth)
+        printf("%-8s %-14s %-30s %s\n", "Hop", "RTT(ms)", "Bandwidth(bps)", "Address / FQDN");
+    else
+        printf("%-8s %-22s %s\n", "Hop", "RTT(ms)", "Address / FQDN");
+    printf("-----------------------------------------------------------------------------------------\n");
     for (int ttl = 1; ttl <= max_hops; ttl++) {
         
+        int packet_size = send_icmp_request(sockfd, dst_ip, ttl);
         
-        
-        if (send_icmp_request(sockfd, dst_ip, ttl) != 0) {
+        if (packet_size == -1) {
             close(sockfd);
             return -1;
         }
         
-        int reply_status = receive_icmp_reply(sockfd, dst_ip, ttl, &rtt);
+        int reply_status = receive_icmp_reply(sockfd, dst_ip, packet_size, ttl, &rtt, bandwidth);
         if (reply_status == 1) {
             break; // We got reply from target host
         }
@@ -152,7 +177,7 @@ int icmp_trace(char *dst_ip, char *type_addr, int max_hops) {
     }
 
     close(sockfd);
-    
+
 
     return 0;
 }

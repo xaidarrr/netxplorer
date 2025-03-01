@@ -35,8 +35,8 @@ char* check_type(const char *input) {
 }
 
 
-// Convert FQDN to IPv4 or IPv6
-char* get_ip_from_fqdn(const char *fqdn) {
+// Convert FQDN to IPv4 
+char* get_ip_from_fqdn(char *fqdn) {
     struct addrinfo hints, *res;
     int status;
     static char ip[INET_ADDRSTRLEN];
@@ -47,8 +47,8 @@ char* get_ip_from_fqdn(const char *fqdn) {
 
     status = getaddrinfo(fqdn, NULL, &hints, &res);
     if (status != 0) {
-        printf("Failure with FQDN");
-        return NULL;
+        printf("\nFailure: Incorrect FQDN\n\n");
+        exit(EXIT_FAILURE);
     }
 
     struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
@@ -59,4 +59,19 @@ char* get_ip_from_fqdn(const char *fqdn) {
     return ip;
 
 }
+
+// Convert IPv4 to FQDN
+char* get_fqdn_from_ip(char *ip) {
+    struct sockaddr_in sa;
+    static char host[NI_MAXHOST];
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sin_family = AF_INET;
+    inet_pton(AF_INET, ip, &sa.sin_addr);
+
+    return (getnameinfo((struct sockaddr *)&sa, sizeof(sa), host, sizeof(host), NULL, 0, NI_NAMEREQD) == 0) ? host : ip;
+
+
+}
+
 

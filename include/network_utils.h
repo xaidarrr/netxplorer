@@ -10,7 +10,8 @@ extern "C" {
 bool is_ipv4(const char *address);
 bool is_fqdn(const char *hostname);
 char* check_type(const char *input);
-char* get_ip_from_fqdn(const char *fqdn);
+char* get_ip_from_fqdn(char *fqdn);
+char* get_fqdn_from_ip(char *ip);
 
 #ifdef __cplusplus
 }
