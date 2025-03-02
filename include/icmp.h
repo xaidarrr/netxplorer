@@ -5,11 +5,12 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 
-unsigned short checksum(void *b, int len);
 int send_icmp_request(int sockfd, char *dst_ip, int ttl);
 int receive_icmp_reply(int sockfd, char *dst_ip, int sent_packet_size, int ttl, double *rtt, bool bandwidth);
-int icmp_trace(char *dst_ip, bool is_fqdn, int max_hops, bool bandwidth);
+int icmp_trace(char *dst_ip, bool is_fqdn, int max_hops, bool bandwidth, char *interface);
+
 
 
 #ifdef __cplusplus

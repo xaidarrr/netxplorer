@@ -1,4 +1,3 @@
-#include "../include/network_utils.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -6,6 +5,14 @@
 #include <arpa/inet.h>
 #include <regex.h>
 #include <netdb.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+
+#include "../include/network_utils.h"
+
 
 // Check for IPv4
 bool is_ipv4(const char *address) {
@@ -47,7 +54,7 @@ char* get_ip_from_fqdn(char *fqdn) {
 
     status = getaddrinfo(fqdn, NULL, &hints, &res);
     if (status != 0) {
-        printf("\nFailure: Incorrect FQDN\n\n");
+        perror("\nFailure: Incorrect FQDN\n\n");
         exit(EXIT_FAILURE);
     }
 
@@ -73,5 +80,68 @@ char* get_fqdn_from_ip(char *ip) {
 
 
 }
+
+// Calculating checksum for IPv4
+unsigned short checksum(void *b, int len) {     
+    unsigned short *buf = (unsigned short *)b; 
+    unsigned int sum = 0; 
+    unsigned short result; 
+ 
+    for (sum = 0; len > 1; len -= 2) 
+        sum += *buf++; 
+    if (len == 1) 
+        sum += *(unsigned char *)buf; 
+     
+    sum = (sum >> 16) + (sum & 0xFFFF); 
+    sum += (sum >> 16); 
+    result = ~sum; 
+    return result; 
+} 
+
+// Set network interface
+char* set_interface(int sockfd, char *interface_name) {
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(struct ifreq));
+    strncpy(ifr.ifr_name, interface_name, IFNAMSIZ);
+
+    if (ioctl(sockfd, SIOCGIFADDR, &ifr) == -1) {
+        printf("\nFailure: Impossible to get IP address of %s\n\n", interface_name);
+        exit(EXIT_FAILURE);
+    }
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr)) == -1) {
+        printf("\nFailure: Impossible to bind socket to %s\n\n", interface_name);
+        exit(EXIT_FAILURE);
+    }
+    struct sockaddr_in *ipaddr = (struct sockaddr_in *)&ifr.ifr_addr;
+    return inet_ntoa(ipaddr->sin_addr);
+}
+
+void print_output(char *ip, double rtt, int ttl, int is_final) {
+    if (strcmp(ip, "* * *") == 0) {
+        printf("%-8d %-15s %s (%s) \n", ttl, "* * *", "* * *", ip);
+    }
+
+    else {
+        char *fqdn = get_fqdn_from_ip(ip);
+        if (is_final == 0) {
+            printf("%-8d %-15.3f %s (%s) \n", ttl, rtt, fqdn, ip);
+        }
+        else {
+            printf("%-8d %-15.3f %s (%s) <--- TARGET HOST\n", ttl, rtt, fqdn, ip);
+        }
+    }
+
+}
+
+void print_statistic(int ttl, double avg_rtt, double max_rtt) {
+    printf("-----------------------------------------------------------------------------------------\n\n");
+    printf("Diagnostic completed.\n");
+    printf("Total hops: %d\n", ttl);
+    printf("Max RTT: %.3f ms\n", max_rtt);
+    printf("Average RTT: %.3f ms\n\n", avg_rtt);
+}
+    
+
 
 
