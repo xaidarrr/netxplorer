@@ -2,39 +2,34 @@
 #include <string>
 #include <exception>
 #include <cstring>
-#include <cstdlib>
+#include <iomanip>
 #include "getopt.h"
 
 #include "../include/network_utils.h"
 #include "../include/icmp.h"
 #include "../include/tcp.h"
 
-
-
 using namespace std;
 
-// Config of parameters
+// Configuration of parameters 
 class Config {
-    private:
-    string protocol = "ICMP";
-    string dst;
-    string type_addr;
-    char *interface = NULL;
-    bool is_fqdn;
-    bool bandwidth = false;
-    u_int16_t port = 0;
-    int max_hops = 64;
-    
-    
+private:
+    string protocol = "icmp";  // Default protocol
+    string dst;                // Target address
+    string type_addr;          // Address type (IPv4/FQDN)
+    char *interface = NULL;    // Network interface
+    int is_fqdn;              // Flag indicating if the address is FQDN
+    unsigned short port = 80;        // Port
+    int max_hops = 64;         // Maximum number hops (TTL)
 
-    public:
+public:
+    // Displays configuration data
     void print_data() {
         cout << "Protocol: " << protocol << "\n";
-        if (port != 0) 
+        if (port != 0)
             cout << "Port: " << port << "\n";
         cout << "Maximum hops: " << max_hops << "\n\n";
     }
-
 
     // Setters
     void set_protocol(string protocol) {
@@ -57,10 +52,6 @@ class Config {
         this->is_fqdn = is_fqdn;
     }
 
-    void set_bandwidth(bool bandwidth) {
-        this->bandwidth = bandwidth;
-    }
-
     void set_port(int port) {
         this->port = port;
     }
@@ -68,7 +59,6 @@ class Config {
     void set_max_hops(int max_hops) {
         this->max_hops = max_hops;
     }
-
 
     // Getters
     string get_protocol() {
@@ -87,12 +77,8 @@ class Config {
         return interface;
     }
 
-    bool get_fqdn() {
+    int get_fqdn() {
         return is_fqdn;
-    }
-
-    bool get_bandwidth() {
-        return bandwidth;
     }
 
     int get_port() {
@@ -102,43 +88,81 @@ class Config {
     int get_max_hops() {
         return max_hops;
     }
-    
-
-    
 };
 
-// Manual of usage
+// Manual user guide
 void print_manual() {
-    cout << "\nUsing netxplorer: ./netxplorer [options]\n\n";
-    cout << "Options:\n";
-    cout << "   -d <destination>                Target IP/FQDN. It can be IPv4 or FQDN [required]\n";
-    cout << "   -t <protocol>                   Which protocol will be used: ICMP or TCP [default: ICMP]\n";
-    cout << "   -p <port>                       Target port. Only for TCP method[optional]\n";
-    cout << "   -m <max_hops>                   Maximum number of hops (TTL) [default: 64]\n\n";
-    cout << "   --bandwidth                     Enable a mode that shows a approximate bandwidth. TCP method is more accurate\n";
-    cout << "   --iface=<interface name>        Select network interface [optional]\n\n\n";
+    cout << "Usage: netxplorer <destination> [options]\n\n";
+    cout << "    <destination>"
+         << setw(37) << " "
+         << "Target IP address or Fully Qualified Domain Name (FQDN).\n"
+         << setw(54) << " " 
+         << "It can be an IPv4 address or a valid FQDN. [required]\n\n";
+    cout << "Options:\n\n";
+    cout << "-t <protocol>, --protocol=<protocol>" 
+         << setw(18) << " "
+         << "Specifies which protocol to use for the test.\n" 
+         << setw(54) << " " 
+         << "Options:\n"
+         << setw(54) << " " 
+         << "ICMP or TCP.\n"
+         << setw(54) << " " 
+         << "Example: -t tcp  \n"
+         << setw(54) << " " 
+         << "[default: ICMP]\n\n";
+    cout << "-p <port>, --port=<port>" 
+         << setw(30) << " "
+         << "Specifies the target port for TCP.\n"
+         << setw(54) << " " 
+         << "Example: -p 443\n"
+         << setw(54) << " " 
+         << "[default: 80]\n\n";
+    cout << "-m <max-hops>, --max-hops=<max-hops>" 
+         << setw(18) << " "
+         << "Specifies the maximum number of hops (TTL) to trace. \n"
+         << setw(54) << " " 
+         << "Example: -m 30\n"
+         << setw(54) << " " 
+         << "[default: 64]\n\n";
+    cout << "-i <interface>, --iface=<interface>" 
+         << setw(19) << " "
+         << "Select the network interface to use for the trace.\n"
+         << setw(54) << " " 
+         << "Example: -i eth0\n"
+         << setw(54) << " " 
+         << "[optional]\n\n";
+    cout << "-h, --help" 
+         << setw(44) << " " 
+         << "Show this help message and exit.\n\n";
+    
     
 }
 
-// Parsing parameters
+// Command-line arguments parsing
 Config parse_args(int argc, char* argv[]) {
     Config config;
     int opt;
 
     struct option long_options[] = {
-        {"bandwidth", no_argument,       0, 'b'},
-        {"help",      no_argument,       0, 'h'},
+        {"protocol", required_argument, 0, 't'},
+        {"port", required_argument, 0, 'p'},
+        {"max-hops", required_argument, 0, 'm'},
+        {"help", no_argument, 0, 'h'},
         {"iface", required_argument, 0, 'i'},
-        {0, 0, 0, 0}  
+        {0, 0, 0, 0}
     };
 
-    while ((opt = getopt_long(argc, argv, "i:bh:t:d:p:m:", long_options, NULL)) != -1) {
-        switch ((opt))
-        {
+    // Processing command-line arguments
+    while ((opt = getopt_long(argc, argv, "t:p:m:i:h", long_options, NULL)) != -1) {
+        switch (opt) {
             // Protocol
             case 't': {
                 string protocol = optarg;
-                if (protocol != "icmp" && protocol != "tcp" && protocol != "udp" && protocol != "all") {
+                // Convert the string to lowercase if the user entered it in uppercase
+                for (auto& c : protocol) {
+                    c = tolower(c);
+                }
+                if (protocol != "icmp" && protocol != "tcp") {
                     cerr << "Failure: Unknown method " << protocol << "\n";
                     print_manual();
                     exit(EXIT_FAILURE);
@@ -147,40 +171,18 @@ Config parse_args(int argc, char* argv[]) {
                 break;
             }
 
-            // Destination    
-            case 'd': {
-                string dst = optarg;
-                string type_addr = check_type(dst.c_str());
-                if (type_addr == "None") {
-                    cerr << "Failure: Invalid destination " << dst << "\n";
-                    print_manual();
-                    exit(EXIT_FAILURE);;
-                }
-                else if (type_addr == "FQDN") {
-                    config.set_type_addr(type_addr);
-                    config.set_fqdn(true);
-                }
-                else {
-                    config.set_type_addr(type_addr);
-                    config.set_fqdn(false);
-                }
-                config.set_dst(dst);
-                break;
-            }
-
             // Port
             case 'p': {
                 try {
                     int port = stoi(optarg);
-                    // 65535 - max port
+                    // Check to ensure the port does not exceed the maximum allowed
                     if (port > 65535) {
                         cerr << "Failure: Maximum port value exceeded " << port << "\n";
                         print_manual();
                         exit(EXIT_FAILURE);
                     }
                     config.set_port(port);
-                } 
-                catch (const invalid_argument& e) {
+                } catch (const invalid_argument& e) {
                     cerr << "Failure: Invalid port " << optarg << "\n";
                     print_manual();
                     exit(EXIT_FAILURE);
@@ -188,22 +190,15 @@ Config parse_args(int argc, char* argv[]) {
                 break;
             }
 
-            // Max hops
+            // Maximum number of hops
             case 'm': {
                 try {
                     int max_hops = stoi(optarg);
                     config.set_max_hops(max_hops);
-                } 
-                catch (const invalid_argument& e) {
+                } catch (const invalid_argument& e) {
                     cerr << "Failure: Invalid maximum hops number " << optarg << "\n";
                     exit(EXIT_FAILURE);
                 }
-                break;
-            }
-
-            // Bandwidth
-            case 'b': {
-                config.set_bandwidth(true);
                 break;
             }
 
@@ -213,78 +208,90 @@ Config parse_args(int argc, char* argv[]) {
                 exit(EXIT_SUCCESS);
             }
 
-            // Interface
+            // Network interface
             case 'i': {
                 config.set_iface(optarg);
                 break;
             }
 
+            // Unknown argument
             default: {
                 print_manual();
                 exit(EXIT_FAILURE);
             }
-
         }
-
-
-    }   
-
-    if (optind < argc) {
-        print_manual();
-        exit(EXIT_FAILURE);
     }
 
-    return config;    
+    // Processing additional parameters for the presence of destination
+    if (optind < argc) {
+        string dst = argv[optind];
+        string type_addr = check_type(dst.c_str());
+        if (type_addr == "None") {
+            cerr << "Failure: Invalid destination " << dst << "\n";
+            print_manual();
+            exit(EXIT_FAILURE);
+        } else if (type_addr == "FQDN") {
+            config.set_type_addr(type_addr);
+            config.set_fqdn(1);
+        } else {
+            config.set_type_addr(type_addr);
+            config.set_fqdn(0);
+        }
+        config.set_dst(dst);
+    }
 
+    return config;
 }
 
 // Main function
 int main(int argc, char *argv[]) {
+    // Parsing arguments
     Config config = parse_args(argc, argv);
     char *dst_ip = strdup(config.get_dst().c_str());
     char *type_addr = strdup(config.get_type_addr().c_str());
     char *iface = config.get_iface();
     int max_hops = config.get_max_hops();
-    bool is_fqdn = config.get_fqdn();
-    bool bandwidth_mode = config.get_bandwidth();
+    int is_fqdn = config.get_fqdn();
     string protocol = config.get_protocol();
-    u_int16_t port = config.get_port();
-    
+    unsigned short port = config.get_port();
+
+    // Displaying information about the target host
     if (is_fqdn) {
-        char *ip_from_fqdn = get_ip_from_fqdn(dst_ip);      
+        char *ip_from_fqdn = get_ip_from_fqdn(dst_ip);
+        if ( ip_from_fqdn == NULL) {
+            free(dst_ip);
+            free(type_addr);
+            exit(EXIT_FAILURE);
+        }
         cout << "\nStarting traceroute to " << dst_ip << " (" << ip_from_fqdn << ")" << "\n";
+    } else {
+        cout << "\nStarting traceroute to " << dst_ip << " (" << dst_ip << ")" << "\n";
     }
-    else {
-        cout << "\nStarting traceroute to " << dst_ip << "(" << dst_ip << ")" << "\n";
-    }
+
+    // Displaying the configuration
     config.print_data();
     
+    printf("%-8s %-20s %s\n", "Hop", "RTT(ms)", "FQDN / Address");
+    printf("--------------------------------------------------------------------------------\n");
 
+    // Choosing the protocol for tracing
     if (protocol == "tcp") {
-        printf("%-8s %-22s %s\n", "Hop", "RTT(ms)", "Address / FQDN");
-        printf("-----------------------------------------------------------------------------------------\n");
-        if(tcp_trace(dst_ip, port, is_fqdn, bandwidth_mode, max_hops, iface) == -1) {
+        if (tcp_trace(dst_ip, port, is_fqdn, max_hops, iface) == -1) {
             free(dst_ip);
             free(type_addr);
             exit(EXIT_FAILURE);
         }
-    }
-    else if (protocol == "ICMP") {
-        printf("%-8s %-22s %s\n", "Hop", "RTT(ms)", "Address / FQDN");
-        printf("-----------------------------------------------------------------------------------------\n");
-        if(icmp_trace(dst_ip, is_fqdn, max_hops, bandwidth_mode, iface) == -1) {
+    } else if (protocol == "icmp") {
+        if (icmp_trace(dst_ip, is_fqdn, max_hops, iface) == -1) {
             free(dst_ip);
             free(type_addr);
             exit(EXIT_FAILURE);
         }
     }
 
-    
-    
-    
+    // Freeing allocated memory
     free(dst_ip);
-    free(type_addr);    
+    free(type_addr);
 
     return 0;
 }
-
