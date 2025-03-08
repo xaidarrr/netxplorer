@@ -39,11 +39,11 @@ int send_icmp_request(int sockfd, char *dst_ip, int ttl, struct timespec *start_
         return -1;
     }
 
-    return sent_bytes;
+    return 0;
 }
 
 // Receiving ICMP Echo Reply or ICMP Time Exceeded
-int receive_icmp_reply(int sockfd, char *dst_ip, int sent_packet_size, int ttl,
+int receive_icmp_reply(int sockfd, char *dst_ip, int ttl,
                        double *rtt, struct timespec *start_time)
 {
     socklen_t addr_len = sizeof(struct sockaddr_in);
@@ -85,10 +85,14 @@ int receive_icmp_reply(int sockfd, char *dst_ip, int sent_packet_size, int ttl,
         print_output(ip, *rtt, ttl, 0);
         return 0;
     }
-    else
+    else if (icmp_header->type == ICMP_ECHO) 
+    {
+        return -1;
+    }
+    else 
     {
         fprintf(stderr, "Received unexpected ICMP packet type: %d\n", icmp_header->type);
-        return -1;
+        return -2;
     }
 }
 
@@ -131,24 +135,30 @@ int icmp_trace(char *dst_ip, int is_fqdn, int max_hops, char *interface)
     for (ttl = 1; ttl <= max_hops; ttl++)
     {
         // Sending ICMP request
-        int sent_packet_size = send_icmp_request(sockfd, dst_ip, ttl, &start_time);
+        int sent_packet_status = send_icmp_request(sockfd, dst_ip, ttl, &start_time);
 
-        if (sent_packet_size == -1)
+        if (sent_packet_status == -1)
         {   
             close(sockfd);
             return -1;
         }
 
         // Receiving ICMP reply
-        int reply_status = receive_icmp_reply(sockfd, dst_ip, sent_packet_size, ttl, &rtt, &start_time);
-        avg_rtt += rtt;
-
-        // Update the maximum RTT value if the current RTT is greater
-        if (rtt > max_rtt)
+        int reply_status = receive_icmp_reply(sockfd, dst_ip, ttl, &rtt, &start_time);
+        if (reply_status == -1) 
         {
-            max_rtt = rtt;
+            ttl -= 1;
         }
+        else 
+        {
+            avg_rtt += rtt;
 
+            // Update the maximum RTT value if the current RTT is greater
+            if (rtt > max_rtt)
+            {
+                max_rtt = rtt;
+            }
+        }   
         // If a response is received from the target host (Echo Reply)
         if (reply_status == 1)
         {

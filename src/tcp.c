@@ -40,7 +40,7 @@ long send_syn_packet(int sockfd, const char *src_ip, char *dst_ip,
     memset(ip_header, 0, sizeof(struct iphdr));
     memset(tcp_header, 0, sizeof(struct tcphdr));
 
-     // Fill in the IP header  
+    // Fill in the IP header  
     ip_header->ihl = 5;           // IP header length  
     ip_header->version = 4;       // IP version  
     ip_header->tos = 0;           // Type of Service  
@@ -53,7 +53,7 @@ long send_syn_packet(int sockfd, const char *src_ip, char *dst_ip,
     ip_header->saddr = inet_addr(src_ip);  // Source address  
     ip_header->daddr = dst_addr.sin_addr.s_addr;  // Destination address  
 
-     // Fill in the TCP header  
+    // Fill in the TCP header  
     tcp_header->source = htons(34553);  // Random source port  
     tcp_header->dest = htons(dst_port);  // Destination port  
     tcp_header->seq = htonl(53466);  // Sequence number  
@@ -69,7 +69,7 @@ long send_syn_packet(int sockfd, const char *src_ip, char *dst_ip,
     tcp_header->check = 0;  // Checksum (to be calculated later)  
     tcp_header->urg_ptr = 0;  // Urgent pointer  
 
-     // Create pseudo header for checksum calculation  
+    // Create pseudo header for checksum calculation  
     struct pseudo_header pshdr;
     pshdr.src_address = inet_addr(src_ip);
     pshdr.dst_address = dst_addr.sin_addr.s_addr;
@@ -80,17 +80,17 @@ long send_syn_packet(int sockfd, const char *src_ip, char *dst_ip,
     int psize = sizeof(struct pseudo_header) + sizeof(struct tcphdr);  // Pseudo + TCP header size  
     char *pgram = (char *)malloc(psize);  // Buffer for pseudo + TCP headers  
 
-     // Copy data to the pseudo header  
+    // Copy data to the pseudo header  
     memcpy(pgram, (char *)&pshdr, sizeof(struct pseudo_header));
     memcpy(pgram + sizeof(struct pseudo_header), tcp_header, sizeof(struct tcphdr));
 
-     // Calculate the TCP checksum  
+    // Calculate the TCP checksum  
     tcp_header->check = checksum((unsigned short *)pgram, psize);
 
-     // Calculate the IP checksum  
+    // Calculate the IP checksum  
     ip_header->check = checksum((unsigned short *)packet, ip_header->tot_len);
 
-     // Set socket options and send the packet  
+    // Set socket options and send the packet  
     int one = 1;
     setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
     setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one));
@@ -121,15 +121,16 @@ int receive_syn_ack_packet(int sock_tcp, int sock_icmp, int ttl, struct timespec
     setsockopt(sock_tcp, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
     setsockopt(sock_icmp, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 
-     // Receive ICMP reply  
+    // Receive ICMP reply  
     ssize_t recv_bytes = recvfrom(sock_icmp, buffer, sizeof(buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
 
     clock_gettime(CLOCK_MONOTONIC, &end_time_icmp);
     clock_gettime(CLOCK_MONOTONIC, &end_time_tcp);
 
     if (recv_bytes >= 0) {
-        if (ip_header->protocol == IPPROTO_ICMP) {
-             // Handle ICMP reply  
+        // Handle ICMP reply
+        if (ip_header->protocol == IPPROTO_ICMP) 
+        {      
             char *ip = inet_ntoa(((struct sockaddr_in *)&recv_addr)->sin_addr);
             *rtt_icmp = ((end_time_icmp.tv_sec - start_time->tv_sec) * 1000 +
                          (end_time_icmp.tv_nsec - start_time->tv_nsec) / 1e6);
@@ -140,12 +141,13 @@ int receive_syn_ack_packet(int sock_tcp, int sock_icmp, int ttl, struct timespec
         }
     }
 
-     // Receive TCP SYN-ACK reply  
+    // Receive TCP reply  
     recv_bytes = recvfrom(sock_tcp, buffer, sizeof(buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
 
     if (recv_bytes >= 0) {
-        if (ip_header->protocol == IPPROTO_TCP && tcp_header->syn == 1 && tcp_header->ack == 1) {
-             // Handle TCP SYN-ACK reply  
+        // Handle TCP SYN-ACK reply 
+        if (ip_header->protocol == IPPROTO_TCP && tcp_header->syn == 1 && tcp_header->ack == 1) 
+        {             
             *rtt_tcp = (((end_time_tcp.tv_sec - start_time->tv_sec) * 1000 +
                          (end_time_tcp.tv_nsec - start_time->tv_nsec) / 1e6) - timeout.tv_sec * 1000) / 2;
 
@@ -154,9 +156,15 @@ int receive_syn_ack_packet(int sock_tcp, int sock_icmp, int ttl, struct timespec
 
             return 1;
         }
+        // Handle TCP RST reply
+        else if (ip_header->protocol == IPPROTO_TCP && tcp_header->rst == 1) {
+            char *ip = inet_ntoa(((struct sockaddr_in *)&recv_addr)->sin_addr);
+            fprintf(stderr, "Received TCP packet type RST from %s\n", ip);
+            return -1;
+        }
     }
 
-     // If no response, print timeout message  
+    // If no response, print timeout message  
     print_output("* * *", 0, ttl, 0);
     return 0;
 }
@@ -174,34 +182,41 @@ int tcp_trace(char *dst_ip, unsigned short port, int is_fqdn, int max_hops, char
     struct sockaddr_in recv_addr;
     char *src_ip;
 
-    if (sock_tcp < 0 || sock_icmp < 0) {
+    if (sock_tcp < 0 || sock_icmp < 0) 
+    {
         fprintf(stderr, "Failure: It's impossible to create a socket");
         return -1;
     }
     // Find a network interface 
-    if (interface == NULL) {
+    if (interface == NULL) 
+    {
         interface = get_primary_interface();
-        if (interface == NULL) {
+        if (interface == NULL) 
+        {
             fprintf(stderr, "Failure: It's impossible get a interface name\nTry to enter it manually");
         }
     }
 
-    if (is_fqdn == 1) {
+    if (is_fqdn == 1) 
+    {
         dst_ip = get_ip_from_fqdn(dst_ip);
-        if(dst_ip == NULL) {
+        if(dst_ip == NULL) 
+        {
             return -1;
         }
     }
         
     for (ttl = 1; ttl < max_hops; ttl++) {
         src_ip = set_interface(sock_tcp, interface);
-        if(src_ip == NULL) {
+        if(src_ip == NULL) 
+        {
             fprintf(stderr, "\nFailure: It's impossible to set interface\n\n");
             return -1;
         }
 
         ssize_t sent_bytes = send_syn_packet(sock_tcp, src_ip, dst_ip, port, ttl, &start_time);
-        if (sent_bytes < 0) {
+        if (sent_bytes < 0) 
+        {
             fprintf(stderr, "\nFailure: Sending TCP SYN packet failed\n\n");
             return -1;
         }
@@ -209,12 +224,15 @@ int tcp_trace(char *dst_ip, unsigned short port, int is_fqdn, int max_hops, char
         int reply_status = receive_syn_ack_packet(sock_tcp, sock_icmp, ttl, &start_time, &rtt_icmp, &rtt_tcp);
         avg_rtt += rtt_icmp + rtt_tcp;
 
-        if (rtt_icmp > max_rtt) {
+        if (rtt_icmp > max_rtt) 
+        {
             max_rtt = rtt_icmp;
-        } else if (rtt_tcp > max_rtt) {
+        } else if (rtt_tcp > max_rtt) 
+        {
             max_rtt = rtt_tcp;
         }
-        if (reply_status == 1) {
+        if (reply_status == 1) 
+        {
             avg_rtt /= ttl;
             print_statistic(ttl, avg_rtt, max_rtt);
             return 0;

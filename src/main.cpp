@@ -26,7 +26,7 @@ public:
     // Displays configuration data
     void print_data() {
         cout << "Protocol: " << protocol << "\n";
-        if (port != 0)
+        if (protocol != "icmp")
             cout << "Port: " << port << "\n";
         cout << "Maximum hops: " << max_hops << "\n\n";
     }

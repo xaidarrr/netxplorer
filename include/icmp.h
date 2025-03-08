@@ -9,7 +9,7 @@ extern "C" {
 int send_icmp_request(int sockfd, char *dst_ip, int ttl);
 
 // Receiving ICMP Echo Reply or ICMP Time Exceeded
-int receive_icmp_reply(int sockfd, char *dst_ip, int sent_packet_size, int ttl, double *rtt);
+int receive_icmp_reply(int sockfd, char *dst_ip, int ttl, double *rtt);
 
 // Function to perform ICMP route tracing
 int icmp_trace(char *dst_ip, int is_fqdn, int max_hops, char *interface);
