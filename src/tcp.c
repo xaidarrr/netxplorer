@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/ip_icmp.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "../include/network_utils.h"
 
@@ -238,6 +239,13 @@ int tcp_trace(char *dst_ip, unsigned short port, int is_fqdn, int max_hops, char
             return 0;
         }
     }
+    if (max_rtt == avg_rtt) 
+    {
+        avg_rtt == avg_rtt / max_hops;
+    }
+    
+    print_statistic(ttl, avg_rtt, max_rtt);
+    return 0;
 }
   
 

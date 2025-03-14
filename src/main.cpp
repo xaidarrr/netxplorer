@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
     unsigned short port = config.get_port();
 
     // Displaying information about the target host
-    if (is_fqdn) {
+    if (is_fqdn == 1) {
         char *ip_from_fqdn = get_ip_from_fqdn(dst_ip);
         if ( ip_from_fqdn == NULL) {
             free(dst_ip);
