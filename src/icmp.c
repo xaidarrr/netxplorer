@@ -166,9 +166,9 @@ int icmp_trace(char *dst_ip, int is_fqdn, int max_hops, char *interface)
             break;
         }
     }
-    if (max_rtt == avg_rtt) 
+    if (max_rtt < avg_rtt) 
     {
-        avg_rtt == avg_rtt / max_hops;
+        avg_rtt = avg_rtt / max_hops;
     }
 
     // Display the statistics after the diagnostic is complete

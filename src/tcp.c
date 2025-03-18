@@ -239,9 +239,9 @@ int tcp_trace(char *dst_ip, unsigned short port, int is_fqdn, int max_hops, char
             return 0;
         }
     }
-    if (max_rtt == avg_rtt) 
+    if (max_rtt < avg_rtt) 
     {
-        avg_rtt == avg_rtt / max_hops;
+        avg_rtt = avg_rtt / max_hops;
     }
     
     print_statistic(ttl, avg_rtt, max_rtt);
