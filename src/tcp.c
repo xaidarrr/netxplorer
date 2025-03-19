@@ -126,7 +126,7 @@ int receive_syn_ack_packet(int sock_tcp, int sock_icmp, int ttl, struct timespec
     ssize_t recv_bytes = recvfrom(sock_icmp, buffer, sizeof(buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
 
     clock_gettime(CLOCK_MONOTONIC, &end_time_icmp);
-    clock_gettime(CLOCK_MONOTONIC, &end_time_tcp);
+    //clock_gettime(CLOCK_MONOTONIC, &end_time_tcp);
 
     if (recv_bytes >= 0) {
         // Handle ICMP reply
@@ -141,10 +141,11 @@ int receive_syn_ack_packet(int sock_tcp, int sock_icmp, int ttl, struct timespec
             return 0;
         }
     }
-
+    
     // Receive TCP reply  
+    clock_gettime(CLOCK_MONOTONIC, &end_time_tcp);
     recv_bytes = recvfrom(sock_tcp, buffer, sizeof(buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
-
+    
     if (recv_bytes >= 0) {
         // Handle TCP SYN-ACK reply 
         if (ip_header->protocol == IPPROTO_TCP && tcp_header->syn == 1 && tcp_header->ack == 1) 

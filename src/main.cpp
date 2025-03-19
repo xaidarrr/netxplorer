@@ -19,7 +19,7 @@ private:
     string type_addr;          // Address type (IPv4/FQDN)
     char *interface = NULL;    // Network interface
     int is_fqdn;              // Flag indicating if the address is FQDN
-    unsigned short port = 80;        // Port
+    unsigned short port = 443;        // Port
     int max_hops = 64;         // Maximum number hops (TTL)
 
 public:
@@ -114,9 +114,9 @@ void print_manual() {
          << setw(30) << " "
          << "Specifies the target port for TCP.\n"
          << setw(54) << " " 
-         << "Example: -p 443\n"
+         << "Example: -p 21\n"
          << setw(54) << " " 
-         << "[default: 80]\n\n";
+         << "[default: 443]\n\n";
     cout << "-m <max-hops>, --max-hops=<max-hops>" 
          << setw(18) << " "
          << "Specifies the maximum number of hops (TTL) to trace. \n"
