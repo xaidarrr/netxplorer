@@ -5,6 +5,7 @@
 #include <netinet/ip_icmp.h>
 #include <sys/socket.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "../include/network_utils.h"
 

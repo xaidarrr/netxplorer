@@ -18,8 +18,8 @@ private:
     string dst;                // Target address
     string type_addr;          // Address type (IPv4/FQDN)
     char *interface = NULL;    // Network interface
-    int is_fqdn;              // Flag indicating if the address is FQDN
-    unsigned short port = 443;        // Port
+    int is_fqdn;               // Flag indicating if the address is FQDN
+    unsigned short port = 443; // Port
     int max_hops = 64;         // Maximum number hops (TTL)
 
 public:

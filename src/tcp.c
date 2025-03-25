@@ -16,10 +16,9 @@
 
  
 // Structure for pseudo header used in checksum calculation for TCP segment
-
 struct pseudo_header {
-    unsigned int src_address;   // Source IP address  
-    unsigned int dst_address;   // Destination IP address  
+    unsigned int src_address;     // Source IP address  
+    unsigned int dst_address;     // Destination IP address  
     unsigned char place_holder;   // Reserved field, always set to 0  
     unsigned char protocol;       // Protocol type  
     unsigned short tcp_length;    // Length of the TCP segment  
